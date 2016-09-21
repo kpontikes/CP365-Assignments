@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import math
 import random
 import numpy as np
+import csv
 
 np.set_printoptions(threshold=50)
 np.random.seed(42)
@@ -122,26 +123,30 @@ class KNN:
 def movieKey(movie_names, clusters):
     movie_key = {}
     for entry in movie_names:
-        movie_key[entry[0]] = entry[1]
+        movie_key[float(entry[0])] = entry[1]
+    #print movie_key
     #for i in range(len(clusters)):
     for cluster in clusters:
         print "CLUSTER"
         for movie in cluster:
-            movie_dict = {k:movie_key[k] for k in cluster if k in movie_key}
-            print movie_dict
-            #print movie_key[movie]
-            #print movie_key[movie]
+            #movie_dict = {k:movie_key[k] for k in cluster if k in movie_key}
+            #print movie
+            print movie_key[movie]
 
 def loadDataset(my_KNN, dataset="u.data", item_file = "u.item"):
-    my_data = np.genfromtxt(dataset, skip_footer = 99800)
-    movie_names = np.genfromtxt(item_file, delimiter='|', skip_header=1)
+    my_data = np.genfromtxt(dataset, skip_footer = 99000)
+    #movie_names = np.genfromtxt(item_file, delimiter='|')
+    movie_names = []
+    with open(item_file, 'rb') as f:
+        titlereader = csv.reader(f, delimiter='|')
+        for entry in titlereader:
+            movie_names.append([entry[0], entry[1]])
     # userID   movieID     rating      timestamp
     for entry in my_data:
-        my_KNN.addToDictionary(entry[0],entry[1],entry[2])
-
+        my_KNN.addToDictionary(entry[0], entry[1], entry[2])
     return my_data, movie_names
 
-myKNN = KNN(3)
+myKNN = KNN(10)
 my_data, movie_names = loadDataset(myKNN)
 #print myKNN.movies
 #my_centroids = myKNN.generateInitCentroids(my_data)
