@@ -7,12 +7,6 @@ import csv
 np.set_printoptions(threshold=50)
 np.random.seed(42)
 
-def euclideanDistance(x, y):
-    s = 0.0
-    for i in range(len(x)):
-        s += (x[i] - y[i]) ** 2
-    return math.sqrt(s)
-
 class KNN:
 
     def __init__(self, K):
@@ -20,44 +14,33 @@ class KNN:
         self.movies = {}
 
     def addToDictionary(self, userid, movie, rating):
-        # userID   movieID     rating      timestamp
         if movie in self.movies:
             self.movies[movie][userid] = rating
         else:
             self.movies[movie] = {userid : rating}
 
     def generateInitCentroids(self, my_data):
-        #generate random list of centroids with userid and corresponding ratings
+        '''Generate random list of centroids with userid and corresponding ratings'''
         centroids = []
         for c in range(self.K):
-            #centroids.append({})
             centroid = {}
             for entry in my_data:
-                #centroids[c] = {entry[0] : random.randint(0,5)}
                 centroid[entry[0]] = random.randint(0,5)
                 centroids.append(centroid)
-                #centroids[entry[1]][entry[0]] = rating
-                #centroid[1] = {entry[0] : entry[2]}
-                #centroid[c][entry[0]] = random.randint(0,5)
-                #centroid[entry[0]] = random.randint(0,5)
-                #centroids.append(centroid)
-        #print centroids
-        #print len(centroids)
         return centroids
 
-    def calculateCentroidDist(self, p1, p2):
+    def calculateDist(self, p1, p2):
         distance = 0
-        #print p1
         for userid, rating in p1.iteritems():
             if userid in p2:
                 distance += (p2[userid] - rating)**2
         return math.sqrt(distance)
 
     def closestCentroid(self, vector, centroids):
+        '''Find closest centroid to data point'''
         min_dist = float('inf')
-        #closest = centroids[0]
         for centroid in centroids:
-            vec_dist = self.calculateCentroidDist(vector, centroid)
+            vec_dist = self.calculateDist(vector, centroid)
             if vec_dist < min_dist:
                 min_dist = vec_dist
                 closest = centroid
@@ -70,7 +53,7 @@ class KNN:
         for movie, user_rating in self.movies.iteritems():
             min_dist = float('inf')
             for c in range(self.K):
-                dist = self.calculateCentroidDist(user_rating, centroids[c])
+                dist = self.calculateDist(user_rating, centroids[c])
                 if dist < min_dist:
                     min_dist = dist
                     closest = c
@@ -78,6 +61,7 @@ class KNN:
         return clusters
 
     def recalculateCentroids(self, clusters, centroids):
+        '''Recalculate centroid locations based on new movie clusters'''
         for ind in range(len(clusters)):
             for userid in centroids[ind]:
                 distance = 0
@@ -89,71 +73,79 @@ class KNN:
                     centroids[ind][userid] = distance/count
         return centroids
 
+    def compareCentroids(self, _old, _new):
+        '''Get change in centroid versions'''
+        #dtype = dict(names = names, formats=formats)
+        for i in range(len(_old)):
+            for users, ratings in _old[i].iteritems():
+                old = np.append(_old,[users, ratings])
+                print float(float(i)/len(_old))
+            #old = np.fromiter(_old[i].iteritems(), dtype = dtype, count=len(_old))
+        #old = np.array([_old.iteritems()])
+        #for i in range(len(_old)):
+            #for users, ratings in _old[i].iteritems():
+        #new = np.array([_new.iteritems()])
+        #for i in range(len(_new)):
+            for new_users, new_ratings in _new[i].iteritems():
+                new = np.append(_new,[new_users, new_ratings])
+                print float(float(i)/len(_old))
+        print old
+        print new
+        compare = abs(old - new)
+        print compare
+        c = np.mean(compare)
+        print c
+        return c
+
     def iterate(self, my_data):
+        '''Generate initial centroids, then continue reclustering and recalculating centroids until there is
+        little to no further change in centroids'''
         centroids = self.generateInitCentroids(my_data)
-        #print centroids[0:2]
+        # update cluster content and centroid locations
         finished = False
         while finished == False:
             clusters = self.cluster(centroids)
-            old = np.array([])
-            for i in range(len(centroids)):
-                for users, ratings in centroids[i].iteritems():
-                    old = np.append(old,[users, ratings])
-                    #old = np.append(old, ratings)
-            #print old
+            print "New cluster"
+            print clusters[0]
             new_centroids = self.recalculateCentroids(clusters, centroids)
-            #print "new centroids"
-            #print new_centroids[0:2]
-            new = np.array([])
-            for i in range(len(new_centroids)):
-                for new_users, new_ratings in new_centroids[i].iteritems():
-                    new = np.append(new, [new_users, new_ratings])
-                    #new = np.append(new, new_ratings)
-            #print new
-            compare = abs(old - new)
-            #print compare
-            c = np.mean(compare)
-            #print c
+            print "New centroid"
+            print new_centroids[0]
+            # compare old centroids to recalculated centroids to see if they are still changing
+            c = self.compareCentroids(centroids, new_centroids)
+            "Compare value"
+            print c
             if c < 0.0001:
-                finished = True
+               finished = True
             else: 
                 centroids = new_centroids
         return clusters
 
 def movieKey(movie_names, clusters):
+    '''Match movie keys in each cluster to respective movie titles'''
     movie_key = {}
     for entry in movie_names:
         movie_key[float(entry[0])] = entry[1]
-    #print movie_key
-    #for i in range(len(clusters)):
     for cluster in clusters:
-        print "CLUSTER"
+        print "------CLUSTER-------"
         for movie in cluster:
-            #movie_dict = {k:movie_key[k] for k in cluster if k in movie_key}
-            #print movie
             print movie_key[movie]
 
 def loadDataset(my_KNN, dataset="u.data", item_file = "u.item"):
-    my_data = np.genfromtxt(dataset, skip_footer = 99000)
-    #movie_names = np.genfromtxt(item_file, delimiter='|')
+    my_data = np.genfromtxt(dataset, skip_footer = 99500)
     movie_names = []
     with open(item_file, 'rb') as f:
         titlereader = csv.reader(f, delimiter='|')
         for entry in titlereader:
             movie_names.append([entry[0], entry[1]])
+    # Format of input data:
     # userID   movieID     rating      timestamp
     for entry in my_data:
         my_KNN.addToDictionary(entry[0], entry[1], entry[2])
     return my_data, movie_names
 
-myKNN = KNN(10)
+myKNN = KNN(6)
 my_data, movie_names = loadDataset(myKNN)
-#print myKNN.movies
-#my_centroids = myKNN.generateInitCentroids(my_data)
-#my_clusters = myKNN.cluster(my_centroids)
-#update_centroids = myKNN.recalculateCentroids(my_clusters, my_centroids)
 clusters = myKNN.iterate(my_data)
-#print clusters
 movieKey(movie_names, clusters)
 
 
